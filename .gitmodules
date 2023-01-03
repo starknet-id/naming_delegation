@@ -1,0 +1,3 @@
+[submodule "naming_contract"]
+	path = lib/naming_contract
+	url = https://github.com/starknet-id/naming_contract
