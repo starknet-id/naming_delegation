@@ -4,3 +4,4 @@ lib-path = "lib"
 
 [contracts]
 simple = ["src/simple.cairo"]
+braavos = ["src/braavos.cairo"]
