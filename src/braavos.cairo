@@ -21,7 +21,6 @@ func _blacklisted_addresses(address: felt) -> (boolean: felt) {
 func _admin_address() -> (_admin_address: felt) {
 }
 
-
 //
 // Implementation
 //
@@ -66,8 +65,8 @@ func domain_to_address{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_che
 @external
 func claim_name{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(name: felt) -> () {
     // Check if registration is open
-    let (is_open) = _name_owners.read(name);
-    with_attr error_message("The registration of Braavos name is closed.") {
+    let (is_open) = _is_registration_open.read();
+    with_attr error_message("The registration of Braavos names is closed.") {
         assert is_open = 1;
     }
 
@@ -80,14 +79,14 @@ func claim_name{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}
     // Check if name is more than 4 letters
     let (high, low) = split_felt(name);
     let number_of_character = _get_amount_of_chars(Uint256(low, high));
-    with_attr error_message("You can not mint Braavos name with less than 4 letters.") {
+    with_attr error_message("You can not register a Braavos name with less than 4 letters.") {
          assert_le_felt(4, number_of_character);
     }
 
     // Check if address is not blackisted
     let (caller) = get_caller_address();
     let (is_blacklisted) = _blacklisted_addresses.read(caller);
-    with_attr error_message("You can not mint any Braavos name again.") {
+    with_attr error_message("You already registered a Braavos name.") {
         assert is_blacklisted = 0;
     }
 

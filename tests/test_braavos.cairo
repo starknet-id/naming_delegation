@@ -1,27 +1,42 @@
 %lang starknet
 
 from starkware.cairo.common.cairo_builtins import HashBuiltin
-from src.braavos import domain_to_address, claim_name, transfer_name, _get_amount_of_chars, open_registration, close_registration
+from src.braavos import domain_to_address, claim_name, transfer_name, _get_amount_of_chars, open_registration, close_registration, _is_registration_open
 from starkware.cairo.common.math import split_felt
 from starkware.cairo.common.uint256 import Uint256
+from src.interface.braavos import IBraavosResolver
+
+
+@external
+func __setup__() {
+    //Should deploy contract and open registration 
+    %{ context.braavos_resolver_contract = deploy_contract("./src/braavos.cairo", [123]).contract_address %}
+    return ();
+}
 
 @external
 func test_claim_name{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() {
+    alloc_locals;
+    local braavos_resolver_contract;
+    %{ 
+        ids.braavos_resolver_contract = context.braavos_resolver_contract
+        stop_prank_callable = start_prank(123, context.braavos_resolver_contract) 
+    %}
+    IBraavosResolver.open_registration(braavos_resolver_contract); 
+
     // Should resolve to 123 because we'll register it (with the encoded domain "thomas").
-    let (prev_owner) = domain_to_address(1, new (1426911989));
+    let (prev_owner) = IBraavosResolver.domain_to_address(braavos_resolver_contract, 1, new (1426911989));
     assert prev_owner = 0;
 
-    %{ stop_prank_callable = start_prank(123) %}
-    open_registration();
-    claim_name(1426911989);
+    IBraavosResolver.claim_name(braavos_resolver_contract, 1426911989); 
 
-    let (owner) = domain_to_address(1, new (1426911989));
+    let (owner) = IBraavosResolver.domain_to_address(braavos_resolver_contract, 1, new (1426911989));
     assert owner = 123;
 
     // Should resolve to 456 because we'll change the resolving value (with the encoded domain "thomas").
-    transfer_name(1426911989, 456);
+    IBraavosResolver.transfer_name(braavos_resolver_contract, 1426911989, 456);
     %{ stop_prank_callable() %}
-    let (owner) = domain_to_address(1, new (1426911989));
+    let (owner) = IBraavosResolver.domain_to_address(braavos_resolver_contract, 1, new (1426911989));
     assert owner = 456;
 
     return ();
@@ -29,72 +44,80 @@ func test_claim_name{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check
 
 @external
 func test_claim_not_allowed_name{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() {
+    alloc_locals;
+    local braavos_resolver_contract;
+    %{ 
+        ids.braavos_resolver_contract = context.braavos_resolver_contract
+        stop_prank_callable = start_prank(123, context.braavos_resolver_contract) 
+    %}
+    IBraavosResolver.open_registration(braavos_resolver_contract); 
+
     // Should revert because of names are less than 4 chars (with the encoded domain "ben").
     %{ 
-        stop_prank_callable = start_prank(123)
-        expect_revert(error_message="You can not mint Braavos name with less than 4 letters.") 
-     %}
-    open_registration();
-    claim_name(18925);
+        expect_revert(error_message="You can not register a Braavos name with less than 4 letters.") 
+    %}
+    IBraavosResolver.claim_name(braavos_resolver_contract, 18925);
 
     return ();
 }
 
 @external
 func test_claim_taken_name{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() {
-    // Should revert because the name is taken (with the encoded domain "thomas").
+    alloc_locals;
+    local braavos_resolver_contract;
     %{ 
-        stop_prank_callable = start_prank(123)
-     %}
-    open_registration();
-    claim_name(1426911989);
+        ids.braavos_resolver_contract = context.braavos_resolver_contract
+        stop_prank_callable = start_prank(123, context.braavos_resolver_contract) 
+    %}
+    IBraavosResolver.open_registration(braavos_resolver_contract); 
+
+    // Should revert because the name is taken (with the encoded domain "thomas").
+    IBraavosResolver.claim_name(braavos_resolver_contract, 1426911989);
     %{ 
         stop_prank_callable()
         stop_prank_callable = start_prank(789)
         expect_revert(error_message="This Braavos name is taken.") 
      %}
-    claim_name(1426911989);
+    IBraavosResolver.claim_name(braavos_resolver_contract, 1426911989);
 
     return ();
 }
 
 @external
 func test_claim_two_names{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() {
+    alloc_locals;
+    local braavos_resolver_contract;
+    %{ 
+        ids.braavos_resolver_contract = context.braavos_resolver_contract
+        stop_prank_callable = start_prank(123, context.braavos_resolver_contract) 
+    %}
+    IBraavosResolver.open_registration(braavos_resolver_contract); 
+
     // Should revert because the name is taken (with the encoded domain "thomas" and "motty").
+    IBraavosResolver.claim_name(braavos_resolver_contract, 1426911989);
     %{ 
-        stop_prank_callable = start_prank(123)
+        expect_revert(error_message="You already registered a Braavos name.") 
      %}
-    open_registration();
-    claim_name(1426911989);
-    %{ 
-        expect_revert(error_message="You can not mint any Braavos name again.") 
-     %}
-    claim_name(51113812);
+    IBraavosResolver.claim_name(braavos_resolver_contract, 51113812);
+
 
     return ();
 }
 
 @external
 func test_open_registration{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() {
-    // Should revert because the mint is closed (with the encoded domain "thomas").
+    alloc_locals;
+    local braavos_resolver_contract;
     %{ 
-        expect_revert(error_message="The registration of Braavos name is closed.") 
-     %}
-    claim_name(1426911989);
-
-    // Should revert because be able to claim the first time but not the second time
+        ids.braavos_resolver_contract = context.braavos_resolver_contract
+        stop_prank_callable = start_prank(123, context.braavos_resolver_contract) 
+    %}
+    
+    // Should revert because the registration is closed (with the encoded domain "thomas").
     %{ 
-        stop_prank_callable = start_prank(123)
+        expect_revert(error_message="The registration of Braavos names is closed.") 
      %}
-    open_registration();
-    claim_name(1426911989);
-    close_registration();
-    %{ 
-        stop_prank_callable()
-        stop_prank_callable = start_prank(789)
-        expect_revert(error_message="The registration of Braavos name is closed.") 
-     %}
-    claim_name(51113812);
+    IBraavosResolver.claim_name(braavos_resolver_contract, 1426911989);
 
     return ();
 }
