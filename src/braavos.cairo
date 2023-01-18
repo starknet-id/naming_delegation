@@ -4,6 +4,7 @@ from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.starknet.common.syscalls import get_caller_address
 from starkware.cairo.common.uint256 import Uint256, uint256_unsigned_div_rem
 from starkware.cairo.common.math import assert_le_felt, split_felt
+from cairo_contracts.src.openzeppelin.upgrades.library import Proxy
 
 @storage_var
 func _name_owners(name) -> (owner: felt) {
@@ -18,22 +19,49 @@ func _blacklisted_addresses(address: felt) -> (boolean: felt) {
 }
 
 @storage_var
+func _caller_class_hash() -> (_caller_class_hash: felt) {
+}
+
+@storage_var
 func _admin_address() -> (_admin_address: felt) {
 }
 
-//
-// Implementation
-//
+// 
+// Proxy functions
+// 
 
-@constructor
-func constructor{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
-    admin: felt
+@external
+func initializer{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+    admin: felt, caller_class_hash: felt
 )  {
+    // Can only be called if there is no admin
+    let (current_admin) = _admin_address.read();
+    assert current_admin = 0;
+
+    _caller_class_hash.write(caller_class_hash);
     _admin_address.write(admin);
 
     return ();
 }
 
+@external
+func upgrade{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+    new_implementation: felt
+) {
+    // Verify that caller is admin
+    let (caller) = get_caller_address();
+    let (admin_address) = _admin_address.read();
+    assert caller = admin_address;
+
+    // Set contract implementation
+    Proxy._set_implementation_hash(new_implementation);
+    return ();
+}
+
+
+//
+// Implementation
+//
 @external
 func open_registration{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
 ) -> () {
@@ -48,6 +76,16 @@ func close_registration{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_ch
 ) -> () {
     _check_admin();
     _is_registration_open.write(0);
+
+    return ();
+}
+
+@external
+func set_caller_class_hash{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+    new_class_hash: felt
+) -> () {
+    _check_admin();
+    _caller_class_hash.write(new_class_hash);
 
     return ();
 }
@@ -69,6 +107,9 @@ func claim_name{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}
     with_attr error_message("The registration of Braavos names is closed.") {
         assert is_open = 1;
     }
+
+    // Check if caller is a braavos wallet
+
 
     // Check if name is not taken 
     let (owner) = _name_owners.read(name);
