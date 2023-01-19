@@ -92,16 +92,6 @@ func set_caller_class_hash{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range
 }
 
 @external
-func domain_to_address{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
-    domain_len: felt, domain: felt*
-) -> (address: felt) {
-    assert domain_len = 1;
-    let (owner) = _name_owners.read([domain]);
-
-    return (owner,);
-}
-
-@external
 func claim_name{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(name: felt) -> () {
     // Check if registration is open
     let (is_open) = _is_registration_open.read();
@@ -159,6 +149,20 @@ func transfer_name{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_p
     return ();
 }
 
+//
+// View functions
+//
+
+@view
+func domain_to_address{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+    domain_len: felt, domain: felt*
+) -> (address: felt) {
+    assert domain_len = 1;
+    let (owner) = _name_owners.read([domain]);
+
+    return (owner,);
+}
+
 @view
 func is_registration_open{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
 ) -> (is_registration_open: felt) {
@@ -200,4 +204,3 @@ func _get_amount_of_chars{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_
     let next = _get_amount_of_chars(p);
     return 1 + next;
 }
-
