@@ -4,13 +4,20 @@ from starkware.cairo.common.cairo_builtins import HashBuiltin
 from src.braavos import domain_to_address, claim_name, transfer_name, _get_amount_of_chars, open_registration, close_registration, _is_registration_open
 from starkware.cairo.common.math import split_felt
 from starkware.cairo.common.uint256 import Uint256
-from src.interface.braavos import IBraavosResolver
+from src.interface.braavos_resolver import IBraavosResolver
 
 
 @external
 func __setup__() {
     //Should deploy contract and open registration 
-    %{ context.braavos_resolver_contract = deploy_contract("./src/braavos.cairo", [123]).contract_address %}
+    %{ 
+        from starkware.starknet.compiler.compile import get_selector_from_name
+
+        logic_contract_class_hash = declare("./src/braavos.cairo").class_hash
+        context.braavos_resolver_contract = deploy_contract("./lib/cairo_contracts/src/openzeppelin/upgrades/presets/Proxy.cairo", [logic_contract_class_hash,
+            get_selector_from_name("initializer"), 2,
+            123, 456]).contract_address 
+    %}
     return ();
 }
 
@@ -20,6 +27,7 @@ func test_claim_name{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check
     local braavos_resolver_contract;
     %{ 
         ids.braavos_resolver_contract = context.braavos_resolver_contract
+        stop_prank_callable = start_prank(123, context.braavos_resolver_contract) 
         stop_prank_callable = start_prank(123, context.braavos_resolver_contract) 
     %}
     IBraavosResolver.open_registration(braavos_resolver_contract); 
@@ -75,7 +83,7 @@ func test_claim_taken_name{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range
     IBraavosResolver.claim_name(braavos_resolver_contract, 1426911989);
     %{ 
         stop_prank_callable()
-        stop_prank_callable = start_prank(789)
+        stop_prank_callable = start_prank(789, context.braavos_resolver_contract) 
         expect_revert(error_message="This Braavos name is taken.") 
      %}
     IBraavosResolver.claim_name(braavos_resolver_contract, 1426911989);

@@ -5,6 +5,7 @@ from starkware.starknet.common.syscalls import get_caller_address
 from starkware.cairo.common.uint256 import Uint256, uint256_unsigned_div_rem
 from starkware.cairo.common.math import assert_le_felt, split_felt
 from cairo_contracts.src.openzeppelin.upgrades.library import Proxy
+from src.interface.braavos_wallet import IBraavosWallet
 
 @storage_var
 func _name_owners(name) -> (owner: felt) {
@@ -109,14 +110,20 @@ func claim_name{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}
     }
 
     // Check if caller is a braavos wallet
+    let (needed_class_hash) = _caller_class_hash.read();
+    let (caller_address) = get_caller_address();
+    let (caller_class_hash) = IBraavosWallet.get_implementation(caller_address);
 
+    with_attr error_message("Your wallet is not a Braavos wallet, change your wallet to a braavos wallet.") {
+        assert caller_class_hash = needed_class_hash;
+    }
 
     // Check if name is not taken 
     let (owner) = _name_owners.read(name);
     with_attr error_message("This Braavos name is taken.") {
         assert owner = 0;
     }
-
+ 
     // Check if name is more than 4 letters
     let (high, low) = split_felt(name);
     let number_of_character = _get_amount_of_chars(Uint256(low, high));
