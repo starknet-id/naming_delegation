@@ -95,7 +95,7 @@ func set_caller_class_hash{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range
 func claim_name{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(name: felt) -> () {
     // Check if registration is open
     let (is_open) = _is_registration_open.read();
-    with_attr error_message("The registration of Braavos names is closed.") {
+    with_attr error_message("The registration is closed.") {
         assert is_open = 1;
     }
 
@@ -103,8 +103,7 @@ func claim_name{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}
     let (needed_class_hash) = _caller_class_hash.read();
     let (caller_address) = get_caller_address();
     let (caller_class_hash) = IBraavosWallet.get_implementation(caller_address);
-
-    with_attr error_message("Your wallet is not a Braavos wallet, change your wallet to a braavos wallet.") {
+    with_attr error_message("Your wallet is not a Braavos wallet, change your wallet to a Braavos wallet.") {
         assert caller_class_hash = needed_class_hash;
     }
 
@@ -117,7 +116,7 @@ func claim_name{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}
     // Check if name is more than 4 letters
     let (high, low) = split_felt(name);
     let number_of_character = _get_amount_of_chars(Uint256(low, high));
-    with_attr error_message("You can not register a Braavos name with less than 4 letters.") {
+    with_attr error_message("You can not register a Braavos name with less than 4 characters.") {
          assert_le_felt(4, number_of_character);
     }
 

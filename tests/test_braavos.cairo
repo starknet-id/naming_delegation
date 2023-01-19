@@ -28,7 +28,7 @@ func test_claim_name{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check
     %{ 
         ids.braavos_resolver_contract = context.braavos_resolver_contract
         stop_prank_callable = start_prank(123, context.braavos_resolver_contract) 
-        stop_prank_callable = start_prank(123, context.braavos_resolver_contract) 
+        stop_mock = mock_call(123, "get_implementation", [456])
     %}
     IBraavosResolver.open_registration(braavos_resolver_contract); 
 
@@ -57,12 +57,13 @@ func test_claim_not_allowed_name{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*,
     %{ 
         ids.braavos_resolver_contract = context.braavos_resolver_contract
         stop_prank_callable = start_prank(123, context.braavos_resolver_contract) 
+        stop_mock = mock_call(123, "get_implementation", [456])
     %}
     IBraavosResolver.open_registration(braavos_resolver_contract); 
 
     // Should revert because of names are less than 4 chars (with the encoded domain "ben").
     %{ 
-        expect_revert(error_message="You can not register a Braavos name with less than 4 letters.") 
+        expect_revert(error_message="You can not register a Braavos name with less than 4 characters.") 
     %}
     IBraavosResolver.claim_name(braavos_resolver_contract, 18925);
 
@@ -76,6 +77,7 @@ func test_claim_taken_name{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range
     %{ 
         ids.braavos_resolver_contract = context.braavos_resolver_contract
         stop_prank_callable = start_prank(123, context.braavos_resolver_contract) 
+        stop_mock = mock_call(123, "get_implementation", [456])
     %}
     IBraavosResolver.open_registration(braavos_resolver_contract); 
 
@@ -84,6 +86,7 @@ func test_claim_taken_name{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range
     %{ 
         stop_prank_callable()
         stop_prank_callable = start_prank(789, context.braavos_resolver_contract) 
+        stop_mock = mock_call(789, "get_implementation", [456])
         expect_revert(error_message="This Braavos name is taken.") 
      %}
     IBraavosResolver.claim_name(braavos_resolver_contract, 1426911989);
@@ -98,6 +101,7 @@ func test_claim_two_names{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_
     %{ 
         ids.braavos_resolver_contract = context.braavos_resolver_contract
         stop_prank_callable = start_prank(123, context.braavos_resolver_contract) 
+        stop_mock = mock_call(123, "get_implementation", [456])
     %}
     IBraavosResolver.open_registration(braavos_resolver_contract); 
 
@@ -119,11 +123,12 @@ func test_open_registration{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, rang
     %{ 
         ids.braavos_resolver_contract = context.braavos_resolver_contract
         stop_prank_callable = start_prank(123, context.braavos_resolver_contract) 
+        stop_mock = mock_call(123, "get_implementation", [456])
     %}
     
     // Should revert because the registration is closed (with the encoded domain "thomas").
     %{ 
-        expect_revert(error_message="The registration of Braavos names is closed.") 
+        expect_revert(error_message="The registration is closed.") 
      %}
     IBraavosResolver.claim_name(braavos_resolver_contract, 1426911989);
 
