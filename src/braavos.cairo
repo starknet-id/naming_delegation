@@ -7,6 +7,18 @@ from starkware.cairo.common.math import assert_le_felt, split_felt
 from cairo_contracts.src.openzeppelin.upgrades.library import Proxy
 from src.interface.braavos_wallet import IBraavosWallet
 
+// 
+// Events
+// 
+
+@event
+func domain_to_addr_update(domain_len: felt, domain: felt*, address: felt) {
+}
+
+// 
+// Storage variables
+// 
+
 @storage_var
 func _name_owners(name) -> (owner: felt) {
 }
@@ -59,6 +71,7 @@ func upgrade{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
 //
 // Implementation
 //
+
 @external
 func open_registration{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
 ) -> () {
@@ -89,6 +102,8 @@ func set_caller_class_hash{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range
 
 @external
 func claim_name{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(name: felt) -> () {
+    alloc_locals;
+
     // Check if registration is open
     let (is_open) = _is_registration_open.read();
     with_attr error_message("The registration is closed.") {
@@ -97,9 +112,9 @@ func claim_name{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}
 
     // Check if caller is a braavos wallet
     let (needed_class_hash) = _caller_class_hash.read();
-    let (caller_address) = get_caller_address();
+    let (caller) = get_caller_address();
     with_attr error_message("Your wallet is not a Braavos wallet, change your wallet to a Braavos wallet.") {
-        let (caller_class_hash) = IBraavosWallet.get_implementation(caller_address);
+        let (caller_class_hash) = IBraavosWallet.get_implementation(caller);
         assert caller_class_hash = needed_class_hash;
     }
 
@@ -117,13 +132,13 @@ func claim_name{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}
     }
 
     // Check if address is not blackisted
-    let (caller) = get_caller_address();
     let (is_blacklisted) = _blacklisted_addresses.read(caller);
     with_attr error_message("You already registered a Braavos name.") {
         assert is_blacklisted = 0;
     }
 
     // Write name to storage and blacklist the address
+    // domain_to_addr_update.emit(2, new (name), caller);
     _name_owners.write(name, caller);
     _blacklisted_addresses.write(caller, 1);
 
@@ -134,6 +149,8 @@ func claim_name{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}
 func transfer_name{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
     name: felt, new_owner: felt
 ) -> () {
+    alloc_locals;
+
     // Check if owner is caller
     let (owner) = _name_owners.read(name);
     let (caller) = get_caller_address();
@@ -147,7 +164,9 @@ func transfer_name{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_p
     }
 
     // Change address in storage
+    // domain_to_addr_update.emit(2, new (name), new_owner);
     _name_owners.write(name, new_owner);
+
     return ();
 }
 
