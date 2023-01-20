@@ -7,17 +7,17 @@ from starkware.cairo.common.math import assert_le_felt, split_felt
 from cairo_contracts.src.openzeppelin.upgrades.library import Proxy
 from src.interface.braavos_wallet import IBraavosWallet
 
-// 
+//
 // Events
-// 
+//
 
 @event
 func domain_to_addr_update(domain_len: felt, domain: felt*, address: felt) {
 }
 
-// 
+//
 // Storage variables
-// 
+//
 
 @storage_var
 func _name_owners(name) -> (owner: felt) {
@@ -39,14 +39,14 @@ func _caller_class_hash() -> (_caller_class_hash: felt) {
 func _admin_address() -> (_admin_address: felt) {
 }
 
-// 
+//
 // Proxy functions
-// 
+//
 
 @external
 func initializer{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
     admin: felt, caller_class_hash: felt
-)  {
+) {
     // Can only be called if there is no admin
     let (current_admin) = _admin_address.read();
     assert current_admin = 0;
@@ -67,14 +67,12 @@ func upgrade{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
     return ();
 }
 
-
 //
 // Implementation
 //
 
 @external
-func open_registration{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
-) -> () {
+func open_registration{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() -> () {
     _check_admin();
     _is_registration_open.write(1);
 
@@ -82,8 +80,7 @@ func open_registration{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_che
 }
 
 @external
-func close_registration{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
-) -> () {
+func close_registration{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() -> () {
     _check_admin();
     _is_registration_open.write(0);
 
@@ -113,22 +110,23 @@ func claim_name{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}
     // Check if caller is a braavos wallet
     let (needed_class_hash) = _caller_class_hash.read();
     let (caller) = get_caller_address();
-    with_attr error_message("Your wallet is not a Braavos wallet, change your wallet to a Braavos wallet.") {
+    with_attr error_message(
+            "Your wallet is not a Braavos wallet, change your wallet to a Braavos wallet.") {
         let (caller_class_hash) = IBraavosWallet.get_implementation(caller);
         assert caller_class_hash = needed_class_hash;
     }
 
-    // Check if name is not taken 
+    // Check if name is not taken
     let (owner) = _name_owners.read(name);
     with_attr error_message("This Braavos name is taken.") {
         assert owner = 0;
     }
- 
+
     // Check if name is more than 4 letters
     let (high, low) = split_felt(name);
     let number_of_character = _get_amount_of_chars(Uint256(low, high));
     with_attr error_message("You can not register a Braavos name with less than 4 characters.") {
-         assert_le_felt(4, number_of_character);
+        assert_le_felt(4, number_of_character);
     }
 
     // Check if address is not blackisted
@@ -138,7 +136,7 @@ func claim_name{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}
     }
 
     // Write name to storage and blacklist the address
-    // domain_to_addr_update.emit(2, new (name), caller);
+    domain_to_addr_update.emit(1, new (name), caller);
     _name_owners.write(name, caller);
     _blacklisted_addresses.write(caller, 1);
 
@@ -158,13 +156,14 @@ func transfer_name{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_p
 
     // Check if new owner is a braavos wallet
     let (needed_class_hash) = _caller_class_hash.read();
-    with_attr error_message("The new owner is not a Braavos wallet, change your wallet to a Braavos wallet.") {
+    with_attr error_message(
+            "The new owner is not a Braavos wallet, change your wallet to a Braavos wallet.") {
         let (new_owner_class_hash) = IBraavosWallet.get_implementation(new_owner);
         assert new_owner_class_hash = needed_class_hash;
     }
 
     // Change address in storage
-    // domain_to_addr_update.emit(2, new (name), new_owner);
+    domain_to_addr_update.emit(1, new (name), new_owner);
     _name_owners.write(name, new_owner);
 
     return ();
@@ -185,8 +184,9 @@ func domain_to_address{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_che
 }
 
 @view
-func is_registration_open{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
-) -> (is_registration_open: felt) {
+func is_registration_open{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() -> (
+    is_registration_open: felt
+) {
     let (is_registration_open) = _is_registration_open.read();
 
     return (is_registration_open,);
@@ -196,8 +196,7 @@ func is_registration_open{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_
 // Utils
 //
 
-func _check_admin{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
-) -> () {
+func _check_admin{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() -> () {
     let (caller) = get_caller_address();
     let (admin) = _admin_address.read();
     with_attr error_message("You can not call this function cause you are not the admin.") {
