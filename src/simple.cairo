@@ -7,7 +7,7 @@ from starkware.starknet.common.syscalls import get_caller_address
 func name_owners(name) -> (owner: felt) {
 }
 
-@external
+@view
 func domain_to_address{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
     domain_len: felt, domain: felt*
 ) -> (address: felt) {
