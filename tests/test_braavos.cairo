@@ -29,6 +29,7 @@ func test_claim_name{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check
         ids.braavos_resolver_contract = context.braavos_resolver_contract
         stop_prank_callable = start_prank(123, context.braavos_resolver_contract) 
         stop_mock = mock_call(123, "get_implementation", [456])
+        stop_mock = mock_call(456, "get_implementation", [456])
     %}
     IBraavosResolver.open_registration(braavos_resolver_contract); 
 

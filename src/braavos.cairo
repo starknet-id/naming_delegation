@@ -102,8 +102,8 @@ func claim_name{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}
     // Check if caller is a braavos wallet
     let (needed_class_hash) = _caller_class_hash.read();
     let (caller_address) = get_caller_address();
-    let (caller_class_hash) = IBraavosWallet.get_implementation(caller_address);
     with_attr error_message("Your wallet is not a Braavos wallet, change your wallet to a Braavos wallet.") {
+        let (caller_class_hash) = IBraavosWallet.get_implementation(caller_address);
         assert caller_class_hash = needed_class_hash;
     }
 
@@ -142,6 +142,13 @@ func transfer_name{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_p
     let (owner) = _name_owners.read(name);
     let (caller) = get_caller_address();
     assert owner = caller;
+
+    // Check if new owner is a braavos wallet
+    let (needed_class_hash) = _caller_class_hash.read();
+    with_attr error_message("The new owner is not a Braavos wallet, change your wallet to a Braavos wallet.") {
+        let (new_owner_class_hash) = IBraavosWallet.get_implementation(new_owner);
+        assert new_owner_class_hash = needed_class_hash;
+    }
 
     // Change address in storage
     _name_owners.write(name, new_owner);
