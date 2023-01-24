@@ -15,8 +15,8 @@ func __setup__() {
 
         logic_contract_class_hash = declare("./src/braavos.cairo").class_hash
         context.braavos_resolver_contract = deploy_contract("./lib/cairo_contracts/src/openzeppelin/upgrades/presets/Proxy.cairo", [logic_contract_class_hash,
-            get_selector_from_name("initializer"), 2,
-            123, 456]).contract_address 
+            get_selector_from_name("initializer"), 1,
+            123]).contract_address 
     %}
     return ();
 }
@@ -32,6 +32,7 @@ func test_claim_name{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check
         stop_mock = mock_call(456, "get_implementation", [456])
     %}
     IBraavosResolver.open_registration(braavos_resolver_contract); 
+    IBraavosResolver.set_wl_class_hash(braavos_resolver_contract, 456); 
 
     // Should resolve to 123 because we'll register it (with the encoded domain "thomas").
     let (prev_owner) = IBraavosResolver.domain_to_address(braavos_resolver_contract, 1, new (1426911989));
@@ -61,6 +62,7 @@ func test_claim_not_allowed_name{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*,
         stop_mock = mock_call(123, "get_implementation", [456])
     %}
     IBraavosResolver.open_registration(braavos_resolver_contract); 
+    IBraavosResolver.set_wl_class_hash(braavos_resolver_contract, 456); 
 
     // Should revert because of names are less than 4 chars (with the encoded domain "ben").
     %{ 
@@ -81,6 +83,7 @@ func test_claim_taken_name{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range
         stop_mock = mock_call(123, "get_implementation", [456])
     %}
     IBraavosResolver.open_registration(braavos_resolver_contract); 
+    IBraavosResolver.set_wl_class_hash(braavos_resolver_contract, 456); 
 
     // Should revert because the name is taken (with the encoded domain "thomas").
     IBraavosResolver.claim_name(braavos_resolver_contract, 1426911989);
@@ -105,6 +108,7 @@ func test_claim_two_names{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_
         stop_mock = mock_call(123, "get_implementation", [456])
     %}
     IBraavosResolver.open_registration(braavos_resolver_contract); 
+    IBraavosResolver.set_wl_class_hash(braavos_resolver_contract, 456); 
 
     // Should revert because the name is taken (with the encoded domain "thomas" and "motty").
     IBraavosResolver.claim_name(braavos_resolver_contract, 1426911989);
@@ -126,7 +130,8 @@ func test_open_registration{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, rang
         stop_prank_callable = start_prank(123, context.braavos_resolver_contract) 
         stop_mock = mock_call(123, "get_implementation", [456])
     %}
-    
+    IBraavosResolver.set_wl_class_hash(braavos_resolver_contract, 456); 
+
     // Should revert because the registration is closed (with the encoded domain "thomas").
     %{ 
         expect_revert(error_message="The registration is closed.") 
@@ -135,6 +140,36 @@ func test_open_registration{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, rang
 
     return ();
 }
+
+@external
+func test_implementation_class_hash{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() {
+    alloc_locals;
+    local braavos_resolver_contract;
+    %{ 
+        ids.braavos_resolver_contract = context.braavos_resolver_contract
+        stop_prank_callable = start_prank(123, context.braavos_resolver_contract) 
+        stop_mock = mock_call(123, "get_implementation", [456])
+    %}
+    IBraavosResolver.open_registration(braavos_resolver_contract); 
+
+    // Should revert because the implementation class hash is not set
+    %{ 
+        expect_revert(error_message="Your wallet is not a Braavos wallet, change your wallet to a Braavos wallet.") 
+     %}
+    IBraavosResolver.claim_name(braavos_resolver_contract, 1426911989); 
+
+    // Should revert because the implementation class hash of the receiver is not whitelisted
+    IBraavosResolver.set_wl_class_hash(braavos_resolver_contract, 456); 
+    IBraavosResolver.claim_name(braavos_resolver_contract, 1426911989); 
+    %{ 
+        expect_revert(error_message="The receiver wallet is not a Braavos wallet, change it to a Braavos wallet.") 
+     %}
+    IBraavosResolver.transfer_name(braavos_resolver_contract, 1426911989, 'argent-x');
+
+
+    return ();
+}
+
 
 @external
 func test_get_amount_of_chars{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() {
