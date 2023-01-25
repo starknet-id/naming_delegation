@@ -32,7 +32,7 @@ func _blacklisted_addresses(address: felt) -> (boolean: felt) {
 }
 
 @storage_var
-func _caller_class_hash() -> (_caller_class_hash: felt) {
+func _is_class_hash_wl(class_hash: felt) -> (boolean: felt) {
 }
 
 @storage_var
@@ -45,13 +45,12 @@ func _admin_address() -> (_admin_address: felt) {
 
 @external
 func initializer{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
-    admin: felt, caller_class_hash: felt
+    admin: felt
 ) {
     // Can only be called if there is no admin
     let (current_admin) = _admin_address.read();
     assert current_admin = 0;
 
-    _caller_class_hash.write(caller_class_hash);
     _admin_address.write(admin);
 
     return ();
@@ -67,8 +66,9 @@ func upgrade{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
     return ();
 }
 
+
 //
-// Implementation
+// Admin functions
 //
 
 @external
@@ -88,14 +88,28 @@ func close_registration{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_ch
 }
 
 @external
-func set_caller_class_hash{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+func set_wl_class_hash{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
     new_class_hash: felt
 ) -> () {
     _check_admin();
-    _caller_class_hash.write(new_class_hash);
+    _is_class_hash_wl.write(new_class_hash, 1);
 
     return ();
 }
+
+@external
+func set_admin{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+    new_admin: felt
+) -> () {
+    _check_admin();
+    _admin_address.write(new_admin);
+
+    return ();
+}
+
+//
+// User functions
+//
 
 @external
 func claim_name{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(name: felt) -> () {
@@ -108,12 +122,12 @@ func claim_name{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}
     }
 
     // Check if caller is a braavos wallet
-    let (needed_class_hash) = _caller_class_hash.read();
     let (caller) = get_caller_address();
     with_attr error_message(
             "Your wallet is not a Braavos wallet, change your wallet to a Braavos wallet.") {
         let (caller_class_hash) = IBraavosWallet.get_implementation(caller);
-        assert caller_class_hash = needed_class_hash;
+        let (is_class_hash_wl) = _is_class_hash_wl.read(caller_class_hash);
+        assert 1 = is_class_hash_wl;
     }
 
     // Check if name is not taken
@@ -155,11 +169,12 @@ func transfer_name{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_p
     assert owner = caller;
 
     // Check if new owner is a braavos wallet
-    let (needed_class_hash) = _caller_class_hash.read();
     with_attr error_message(
-            "The new owner is not a Braavos wallet, change your wallet to a Braavos wallet.") {
+            "The receiver wallet is not a Braavos wallet, change it to a Braavos wallet.") {
         let (new_owner_class_hash) = IBraavosWallet.get_implementation(new_owner);
-        assert new_owner_class_hash = needed_class_hash;
+        let (is_class_hash_wl) = _is_class_hash_wl.read(new_owner_class_hash);
+
+        assert 1 = is_class_hash_wl;
     }
 
     // Change address in storage
@@ -190,6 +205,16 @@ func is_registration_open{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_
     let (is_registration_open) = _is_registration_open.read();
 
     return (is_registration_open,);
+}
+
+
+@view
+func is_class_hash_wl{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+    class_hash: felt
+) -> (is_whitelisted: felt) {
+    let (is_whitelisted) = _is_class_hash_wl.read(class_hash);
+
+    return (is_whitelisted,);
 }
 
 //

@@ -14,4 +14,7 @@ namespace IBraavosResolver {
 
     func transfer_name(name: felt, new_owner: felt) {
     }
+
+    func set_wl_class_hash(wl_class_hash: felt) {
+    }
 }
