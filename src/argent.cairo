@@ -50,7 +50,7 @@ func initializer{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr
     // Can only be called if there is no admin
     let (current_admin) = _admin_address.read();
     assert current_admin = 0;
-
+    // set the admin
     _admin_address.write(admin);
 
     return ();
@@ -121,31 +121,26 @@ func claim_name{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}
         assert is_open = 1;
     }
 
-    // Check if caller is a braavos wallet
+    // Check if caller is an Argent wallet
     let (caller) = get_caller_address();
-    with_attr error_message(
-            "Your wallet is not a Braavos wallet, change your wallet to a Braavos wallet.") {
-        let (caller_class_hash) = IProxyWallet.get_implementation(caller);
-        let (is_class_hash_wl) = _is_class_hash_wl.read(caller_class_hash);
-        assert 1 = is_class_hash_wl;
-    }
+    _check_argent_account(caller);
 
     // Check if name is not taken
     let (owner) = _name_owners.read(name);
-    with_attr error_message("This Braavos name is taken.") {
+    with_attr error_message("This name is already taken.") {
         assert owner = 0;
     }
 
     // Check if name is more than 4 letters
     let (high, low) = split_felt(name);
     let number_of_character = _get_amount_of_chars(Uint256(low, high));
-    with_attr error_message("You can not register a Braavos name with less than 4 characters.") {
+    with_attr error_message("You can not register a name with less than 4 characters.") {
         assert_le_felt(4, number_of_character);
     }
 
     // Check if address is not blackisted
     let (is_blacklisted) = _blacklisted_addresses.read(caller);
-    with_attr error_message("You already registered a Braavos name.") {
+    with_attr error_message("You already registered a name.") {
         assert is_blacklisted = 0;
     }
 
@@ -168,14 +163,8 @@ func transfer_name{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_p
     let (caller) = get_caller_address();
     assert owner = caller;
 
-    // Check if new owner is a braavos wallet
-    with_attr error_message(
-            "The receiver wallet is not a Braavos wallet, change it to a Braavos wallet.") {
-        let (new_owner_class_hash) = IProxyWallet.get_implementation(new_owner);
-        let (is_class_hash_wl) = _is_class_hash_wl.read(new_owner_class_hash);
-
-        assert 1 = is_class_hash_wl;
-    }
+    // Check if new owner is an Argent wallet
+    _check_argent_account(new_owner);
 
     // Change address in storage
     domain_to_addr_update.emit(1, new (name), new_owner);
@@ -224,8 +213,20 @@ func is_class_hash_wl{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_chec
 func _check_admin{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() -> () {
     let (caller) = get_caller_address();
     let (admin) = _admin_address.read();
-    with_attr error_message("You can not call this function cause you are not the admin.") {
+    with_attr error_message("You need to be the admin.") {
         assert caller = admin;
+    }
+
+    return ();
+}
+
+func _check_argent_account{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(owner: felt) -> () {
+    with_attr error_message(
+            "The receiver wallet is not an Argent wallet. Please change your wallet to Argent.") {
+        let (owner_class_hash) = IProxyWallet.get_implementation(owner);
+        let (is_class_hash_wl) = _is_class_hash_wl.read(owner_class_hash);
+
+        assert 1 = is_class_hash_wl;
     }
 
     return ();
