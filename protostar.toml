@@ -5,5 +5,6 @@ cairo-path = ["lib", "./lib/cairo_contracts/src"]
 
 [contracts]
 simple = ["src/simple.cairo"]
+argent = ["src/argent.cairo"]
 braavos = ["src/braavos.cairo"]
 proxy = ["lib/cairo_contracts/src/openzeppelin/upgrades/presets/Proxy.cairo"]

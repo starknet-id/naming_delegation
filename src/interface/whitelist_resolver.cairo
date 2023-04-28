@@ -2,7 +2,7 @@
 from starkware.cairo.common.uint256 import Uint256
 
 @contract_interface
-namespace IBraavosResolver {
+namespace IWhitelistResolver {
     func open_registration() {
     }
 

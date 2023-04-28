@@ -13,8 +13,8 @@ func __setup__() {
     %{ 
         from starkware.starknet.compiler.compile import get_selector_from_name
 
-        logic_contract_class_hash = declare("./src/braavos.cairo").class_hash
-        context.braavos_resolver_contract = deploy_contract("./lib/cairo_contracts/src/openzeppelin/upgrades/presets/Proxy.cairo", [logic_contract_class_hash,
+        logic_contract_class_hash = declare("./src/argent.cairo").class_hash
+        context.argent_resolver_contract = deploy_contract("./lib/cairo_contracts/src/openzeppelin/upgrades/presets/Proxy.cairo", [logic_contract_class_hash,
             get_selector_from_name("initializer"), 1,
             123]).contract_address 
     %}
@@ -24,29 +24,29 @@ func __setup__() {
 @external
 func test_claim_name{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() {
     alloc_locals;
-    local braavos_resolver_contract;
+    local argent_resolver_contract;
     %{ 
-        ids.braavos_resolver_contract = context.braavos_resolver_contract
-        stop_prank_callable = start_prank(123, context.braavos_resolver_contract) 
+        ids.argent_resolver_contract = context.argent_resolver_contract
+        stop_prank_callable = start_prank(123, context.argent_resolver_contract) 
         stop_mock = mock_call(123, "get_implementation", [456])
         stop_mock = mock_call(456, "get_implementation", [456])
     %}
-    IWhitelistResolver.open_registration(braavos_resolver_contract); 
-    IWhitelistResolver.set_wl_class_hash(braavos_resolver_contract, 456); 
+    IWhitelistResolver.open_registration(argent_resolver_contract); 
+    IWhitelistResolver.set_wl_class_hash(argent_resolver_contract, 456); 
 
     // Should resolve to 123 because we'll register it (with the encoded domain "thomas").
-    let (prev_owner) = IWhitelistResolver.domain_to_address(braavos_resolver_contract, 1, new (1426911989));
+    let (prev_owner) = IWhitelistResolver.domain_to_address(argent_resolver_contract, 1, new (1426911989));
     assert prev_owner = 0;
 
-    IWhitelistResolver.claim_name(braavos_resolver_contract, 1426911989); 
+    IWhitelistResolver.claim_name(argent_resolver_contract, 1426911989); 
 
-    let (owner) = IWhitelistResolver.domain_to_address(braavos_resolver_contract, 1, new (1426911989));
+    let (owner) = IWhitelistResolver.domain_to_address(argent_resolver_contract, 1, new (1426911989));
     assert owner = 123;
 
     // Should resolve to 456 because we'll change the resolving value (with the encoded domain "thomas").
-    IWhitelistResolver.transfer_name(braavos_resolver_contract, 1426911989, 456);
+    IWhitelistResolver.transfer_name(argent_resolver_contract, 1426911989, 456);
     %{ stop_prank_callable() %}
-    let (owner) = IWhitelistResolver.domain_to_address(braavos_resolver_contract, 1, new (1426911989));
+    let (owner) = IWhitelistResolver.domain_to_address(argent_resolver_contract, 1, new (1426911989));
     assert owner = 456;
 
     return ();
@@ -55,20 +55,20 @@ func test_claim_name{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check
 @external
 func test_claim_not_allowed_name{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() {
     alloc_locals;
-    local braavos_resolver_contract;
+    local argent_resolver_contract;
     %{ 
-        ids.braavos_resolver_contract = context.braavos_resolver_contract
-        stop_prank_callable = start_prank(123, context.braavos_resolver_contract) 
+        ids.argent_resolver_contract = context.argent_resolver_contract
+        stop_prank_callable = start_prank(123, context.argent_resolver_contract) 
         stop_mock = mock_call(123, "get_implementation", [456])
     %}
-    IWhitelistResolver.open_registration(braavos_resolver_contract); 
-    IWhitelistResolver.set_wl_class_hash(braavos_resolver_contract, 456); 
+    IWhitelistResolver.open_registration(argent_resolver_contract); 
+    IWhitelistResolver.set_wl_class_hash(argent_resolver_contract, 456); 
 
     // Should revert because of names are less than 4 chars (with the encoded domain "ben").
     %{ 
-        expect_revert(error_message="You can not register a Braavos name with less than 4 characters.") 
+        expect_revert(error_message="You can not register a name with less than 4 characters.") 
     %}
-    IWhitelistResolver.claim_name(braavos_resolver_contract, 18925);
+    IWhitelistResolver.claim_name(argent_resolver_contract, 18925);
 
     return ();
 }
@@ -76,24 +76,24 @@ func test_claim_not_allowed_name{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*,
 @external
 func test_claim_taken_name{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() {
     alloc_locals;
-    local braavos_resolver_contract;
+    local argent_resolver_contract;
     %{ 
-        ids.braavos_resolver_contract = context.braavos_resolver_contract
-        stop_prank_callable = start_prank(123, context.braavos_resolver_contract) 
+        ids.argent_resolver_contract = context.argent_resolver_contract
+        stop_prank_callable = start_prank(123, context.argent_resolver_contract) 
         stop_mock = mock_call(123, "get_implementation", [456])
     %}
-    IWhitelistResolver.open_registration(braavos_resolver_contract); 
-    IWhitelistResolver.set_wl_class_hash(braavos_resolver_contract, 456); 
+    IWhitelistResolver.open_registration(argent_resolver_contract); 
+    IWhitelistResolver.set_wl_class_hash(argent_resolver_contract, 456); 
 
     // Should revert because the name is taken (with the encoded domain "thomas").
-    IWhitelistResolver.claim_name(braavos_resolver_contract, 1426911989);
+    IWhitelistResolver.claim_name(argent_resolver_contract, 1426911989);
     %{ 
         stop_prank_callable()
-        stop_prank_callable = start_prank(789, context.braavos_resolver_contract) 
+        stop_prank_callable = start_prank(789, context.argent_resolver_contract) 
         stop_mock = mock_call(789, "get_implementation", [456])
-        expect_revert(error_message="This Braavos name is taken.") 
+        expect_revert(error_message="This name is already taken.") 
      %}
-    IWhitelistResolver.claim_name(braavos_resolver_contract, 1426911989);
+    IWhitelistResolver.claim_name(argent_resolver_contract, 1426911989);
 
     return ();
 }
@@ -101,21 +101,21 @@ func test_claim_taken_name{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range
 @external
 func test_claim_two_names{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() {
     alloc_locals;
-    local braavos_resolver_contract;
+    local argent_resolver_contract;
     %{ 
-        ids.braavos_resolver_contract = context.braavos_resolver_contract
-        stop_prank_callable = start_prank(123, context.braavos_resolver_contract) 
+        ids.argent_resolver_contract = context.argent_resolver_contract
+        stop_prank_callable = start_prank(123, context.argent_resolver_contract) 
         stop_mock = mock_call(123, "get_implementation", [456])
     %}
-    IWhitelistResolver.open_registration(braavos_resolver_contract); 
-    IWhitelistResolver.set_wl_class_hash(braavos_resolver_contract, 456); 
+    IWhitelistResolver.open_registration(argent_resolver_contract); 
+    IWhitelistResolver.set_wl_class_hash(argent_resolver_contract, 456); 
 
     // Should revert because the name is taken (with the encoded domain "thomas" and "motty").
-    IWhitelistResolver.claim_name(braavos_resolver_contract, 1426911989);
+    IWhitelistResolver.claim_name(argent_resolver_contract, 1426911989);
     %{ 
-        expect_revert(error_message="You already registered a Braavos name.") 
+        expect_revert(error_message="You already registered a name.") 
      %}
-    IWhitelistResolver.claim_name(braavos_resolver_contract, 51113812);
+    IWhitelistResolver.claim_name(argent_resolver_contract, 51113812);
 
 
     return ();
@@ -124,19 +124,19 @@ func test_claim_two_names{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_
 @external
 func test_open_registration{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() {
     alloc_locals;
-    local braavos_resolver_contract;
+    local argent_resolver_contract;
     %{ 
-        ids.braavos_resolver_contract = context.braavos_resolver_contract
-        stop_prank_callable = start_prank(123, context.braavos_resolver_contract) 
+        ids.argent_resolver_contract = context.argent_resolver_contract
+        stop_prank_callable = start_prank(123, context.argent_resolver_contract) 
         stop_mock = mock_call(123, "get_implementation", [456])
     %}
-    IWhitelistResolver.set_wl_class_hash(braavos_resolver_contract, 456); 
+    IWhitelistResolver.set_wl_class_hash(argent_resolver_contract, 456); 
 
     // Should revert because the registration is closed (with the encoded domain "thomas").
     %{ 
         expect_revert(error_message="The registration is closed.") 
      %}
-    IWhitelistResolver.claim_name(braavos_resolver_contract, 1426911989);
+    IWhitelistResolver.claim_name(argent_resolver_contract, 1426911989);
 
     return ();
 }
@@ -144,27 +144,27 @@ func test_open_registration{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, rang
 @external
 func test_implementation_class_hash{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() {
     alloc_locals;
-    local braavos_resolver_contract;
+    local argent_resolver_contract;
     %{ 
-        ids.braavos_resolver_contract = context.braavos_resolver_contract
-        stop_prank_callable = start_prank(123, context.braavos_resolver_contract) 
+        ids.argent_resolver_contract = context.argent_resolver_contract
+        stop_prank_callable = start_prank(123, context.argent_resolver_contract) 
         stop_mock = mock_call(123, "get_implementation", [456])
     %}
-    IWhitelistResolver.open_registration(braavos_resolver_contract); 
+    IWhitelistResolver.open_registration(argent_resolver_contract); 
 
     // Should revert because the implementation class hash is not set
     %{ 
-        expect_revert(error_message="Your wallet is not a Braavos wallet, change your wallet to a Braavos wallet.") 
+        expect_revert(error_message="The receiver wallet is not an Argent wallet. Please change your wallet to Argent.") 
      %}
-    IWhitelistResolver.claim_name(braavos_resolver_contract, 1426911989); 
+    IWhitelistResolver.claim_name(argent_resolver_contract, 1426911989); 
 
     // Should revert because the implementation class hash of the receiver is not whitelisted
-    IWhitelistResolver.set_wl_class_hash(braavos_resolver_contract, 456); 
-    IWhitelistResolver.claim_name(braavos_resolver_contract, 1426911989); 
+    IWhitelistResolver.set_wl_class_hash(argent_resolver_contract, 456); 
+    IWhitelistResolver.claim_name(argent_resolver_contract, 1426911989); 
     %{ 
-        expect_revert(error_message="The receiver wallet is not a Braavos wallet, change it to a Braavos wallet.") 
+        expect_revert(error_message="The receiver wallet is not an Argent wallet. Please change your wallet to Argent.") 
      %}
-    IWhitelistResolver.transfer_name(braavos_resolver_contract, 1426911989, 'argent-x');
+    IWhitelistResolver.transfer_name(argent_resolver_contract, 1426911989, 'argent-x');
 
 
     return ();
