@@ -124,7 +124,7 @@ func claim_name_for{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_
     // Check if receiver is a braavos wallet
     with_attr error_message(
             "The wallet is not a Braavos wallet, change your wallet to a Braavos wallet.") {
-        let (address_class_hash) = IBraavosWallet.get_implementation(address);
+        let (address_class_hash) = IProxyWallet.get_implementation(address);
         let (is_class_hash_wl) = _is_class_hash_wl.read(address_class_hash);
         assert 1 = is_class_hash_wl;
     }
