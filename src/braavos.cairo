@@ -112,6 +112,51 @@ func set_admin{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
 //
 
 @external
+func claim_name_for{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(name: felt, address: felt) -> () {
+    alloc_locals;
+
+    // Check if registration is open
+    let (is_open) = _is_registration_open.read();
+    with_attr error_message("The registration is closed.") {
+        assert is_open = 1;
+    }
+
+    // Check if receiver is a braavos wallet
+    with_attr error_message(
+            "The wallet is not a Braavos wallet, change your wallet to a Braavos wallet.") {
+        let (address_class_hash) = IBraavosWallet.get_implementation(address);
+        let (is_class_hash_wl) = _is_class_hash_wl.read(address_class_hash);
+        assert 1 = is_class_hash_wl;
+    }
+
+    // Check if name is not taken
+    let (owner) = _name_owners.read(name);
+    with_attr error_message("This Braavos name is taken.") {
+        assert owner = 0;
+    }
+
+    // Check if name is more than 4 letters
+    let (high, low) = split_felt(name);
+    let number_of_character = _get_amount_of_chars(Uint256(low, high));
+    with_attr error_message("You can not register a Braavos name with less than 4 characters.") {
+        assert_le_felt(4, number_of_character);
+    }
+
+    // Check if address is not blackisted
+    let (is_blacklisted) = _blacklisted_addresses.read(address);
+    with_attr error_message("Address already registered a Braavos name.") {
+        assert is_blacklisted = 0;
+    }
+
+    // Write name to storage and blacklist the address
+    domain_to_addr_update.emit(1, new (name), address);
+    _name_owners.write(name, address);
+    _blacklisted_addresses.write(address, 1);
+
+    return ();
+}
+
+@external
 func claim_name{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(name: felt) -> () {
     alloc_locals;
 

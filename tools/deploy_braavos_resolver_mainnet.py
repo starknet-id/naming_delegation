@@ -81,4 +81,3 @@ if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main())
 
-python ./tools/deploy_braavos_resolver_testnet.py 1250237939518881472909486259574383323840686613366608411729001127146737128721
